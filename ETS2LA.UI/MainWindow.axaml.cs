@@ -227,7 +227,7 @@ public partial class MainWindow : AppWindow
                     Spacing = 8,
                     Children =
                     {
-                        new TextBlock { Text = title, FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold },
+                        new TextBlock { Text = title, FontSize = 23, FontWeight = Avalonia.Media.FontWeight.SemiBold },
                         new TextBlock { Text = body, TextWrapping = Avalonia.Media.TextWrapping.Wrap }
                     }
                 }
