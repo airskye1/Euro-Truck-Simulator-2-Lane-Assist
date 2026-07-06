@@ -266,7 +266,6 @@ public class ParsedRoad : IParsedItem
         {
             OrientedPoint point = InterpolateLane(closestFactor, Side.Left, i);
             float distance = Vector3.Distance(point.Position, Position);
-            Logger.Info($"Left lane {i + 1}: distance={distance}, position={point.Position}");
             if (distance < closestLaneDistance)
             {
                 closestLaneDistance = distance;
@@ -277,7 +276,6 @@ public class ParsedRoad : IParsedItem
         {
             OrientedPoint point = InterpolateLane(closestFactor, Side.Right, i);
             float distance = Vector3.Distance(point.Position, Position);
-            Logger.Info($"Right lane {i + 1}: distance={distance}, position={point.Position}");
             if (distance < closestLaneDistance)
             {
                 closestLaneDistance = distance;
@@ -683,7 +681,6 @@ public class ParsedRoadList : IParsedItem
         {
             OrientedPoint point = InterpolateLane(closestFactor, Side.Left, i);
             float distance = Vector3.Distance(point.Position, Position);
-            Logger.Info($"Left lane {i + 1}: distance={distance}, position={point.Position}");
             if (distance < closestLaneDistance)
             {
                 closestLaneDistance = distance;
@@ -694,7 +691,6 @@ public class ParsedRoadList : IParsedItem
         {
             OrientedPoint point = InterpolateLane(closestFactor, Side.Right, i);
             float distance = Vector3.Distance(point.Position, Position);
-            Logger.Info($"Right lane {i + 1}: distance={distance}, position={point.Position}");
             if (distance < closestLaneDistance)
             {
                 closestLaneDistance = distance;
@@ -1261,9 +1257,7 @@ public class ParsedPrefab : IParsedItem
 
     public Node GetNodeMostInFront(Vector3 position, Quaternion rotation, List<Node>? ignoreNodes = null, bool inverted = false)
     {
-        Logger.Info($"Finding most in front node at {position} rot: {rotation}. Inverted: {inverted}");
         Vector3 forward = Vector3.Transform(Vector3.UnitX, rotation);
-        Logger.Info($"Forward vector: {forward}");
         Node? mostInFront = null;
         float bestDot = inverted ? float.MinValue : float.MaxValue;
         foreach (var node in Prefab.Nodes)
@@ -1272,10 +1266,8 @@ public class ParsedPrefab : IParsedItem
 
             Vector3 toNode = node.Position - position;
             float dot = Math.Abs(Vector3.Dot(forward, toNode));
-            Logger.Info($"Node {node.Uid}: dot={dot}");
             if ((!inverted && dot < bestDot) || (inverted && dot > bestDot))
             {
-                Logger.Info($"Node {node.Uid} is now the most in front");
                 bestDot = dot;
                 mostInFront = (Node)node;
             }
@@ -1357,8 +1349,6 @@ public class ParsedPrefab : IParsedItem
         ControlNode startControlNode = GetControlNodeForNode(startNode);
         ControlNode endControlNode = GetControlNodeForNode(endNode);
 
-        Logger.Info($"Finding paths from C.N. {Descriptor.Nodes.IndexOf(startControlNode)} to C.N. {Descriptor.Nodes.IndexOf(endControlNode)}");
-
         // We extract the curve ids from Descriptor.ControlNode.Input/OutputLines
         // These match Prefab.Nodes in indices, so we can easily get the start and end using them
         List<int> startCurveIdsForward = GetCurveIdsForControlNode(startControlNode, Direction.Forward);
@@ -1370,13 +1360,8 @@ public class ParsedPrefab : IParsedItem
         List<int> startCurveIds = dir == Direction.Forward ? startCurveIdsForward : startCurveIdsBackward;
         List<int> endCurveIds = GetCurveIdsForControlNode(endControlNode, other);
 
-        Logger.Info($"Start Curve IDs: {string.Join(", ", startCurveIds)}, End Curve IDs: {string.Join(", ", endCurveIds)}, Direction: {dir}");
-        Logger.Info($"Descriptor curve count: {Descriptor.NavCurves.Count}");
-
         List<NavCurve> startCurves = startCurveIds.Select(id => Descriptor.NavCurves[id]).ToList();
         List<NavCurve> endCurves = endCurveIds.Select(id => Descriptor.NavCurves[id]).ToList();
-
-        Logger.Info($"Start Curves: {startCurves.Count}, End Curves: {endCurves.Count}");
 
         // Then those have to be traversed until we find a path that connects them. Here we 
         // return them all since there can be multiple paths between the same nodes.
@@ -1385,9 +1370,7 @@ public class ParsedPrefab : IParsedItem
         {
             foreach (var endCurve in endCurves)
             {
-                Logger.Info($"Finding path from curve {startCurve} to curve {endCurve}");
                 List<NavCurve> path = TraverseCurveUntilTarget(startCurve, endCurve);
-                Logger.Info($"Path found with {path.Count} curves");
                 if (path.Count > 0 && path.Last() == endCurve)
                 {
                     paths.Add(new PrefabPath(this, startNode, endNode, path, dir, rotationMatrix, prefabStart));
@@ -1400,7 +1383,6 @@ public class ParsedPrefab : IParsedItem
         bestPaths = bestPaths.OrderBy(p => p.Length).ToList();
         otherPaths = otherPaths.OrderBy(p => p.Length).ToList();
 
-        Logger.Info($"Total paths found: {paths.Count}, Best paths: {bestPaths.Count}, Other paths: {otherPaths.Count}");
         return (bestPaths, otherPaths);
     }
 
