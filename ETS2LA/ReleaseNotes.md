@@ -1,7 +1,6 @@
-### ETS2LA C# 3.4.17
-- Add option to `Pause When Unstable` in Assistance Settings.
-  - This will pause the lane assist for whatever reason disconnects without your input.
-- Add `GetNextCurve`, `GetPreviousCurve` to `PrefabPath` class.
+### ETS2LA C# 3.4.18
+- Cleanup debug printing in `ETS2LA.Game`.
+- **Drk** - Handle switching games while ETS2LA is running. Reset game data and `IsGameRunning` when SDK reports inactive.
 
 ---
 <!-- Content inside ETS2LA will be cutoff at the line above, do not place lines inside the changelog. -->
