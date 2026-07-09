@@ -6,6 +6,7 @@ using ETS2LA.Overlay;
 using ETS2LA.Backend;
 using ETS2LA.Game.Telemetry;
 using ETS2LA.State;
+using ETS2LA.Logging;
 using ETS2LA.Settings.Global;
 using ETS2LA.Telemetry;
 using ETS2LA.Networking;
@@ -16,6 +17,8 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Exporter;
 
+using System.Runtime.InteropServices;
+
 namespace ETS2LA;
 
 internal static class Program
@@ -25,6 +28,20 @@ internal static class Program
     /// </summary>
     static void Main(string[] args)
     {
+        // This handles the main thread crashing (Avalonia)
+        // Nothing else *should* run on the main thread.
+        AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+        {
+            HandleFatalException(e.ExceptionObject as Exception);
+        };
+
+        // This is for unobserved exceptions, i.e. plugins and other Task.Run() calls etc..
+        TaskScheduler.UnobservedTaskException += (sender, e) =>
+        {
+            e.SetObserved(); // Prevents an immediate crash, we'll handle termination in HandleFatalException instead.
+            HandleFatalException(e.Exception);
+        };
+
         // Velopack is the installer / update manager
         // Please don't move this, Velopack has to be initialized before anything else,
         // otherwise we might end up with weird bugs.
@@ -72,11 +89,13 @@ internal static class Program
         bool shutdown = false;
         var AnalyticsThread = Task.Factory.StartNew(() =>
         {
+            AppAnalytics.StartSession();
             while (!shutdown)
             {
                 AppAnalytics.Pulse();
                 Thread.Sleep(TimeSpan.FromMinutes(1));
             }
+            AppAnalytics.StopSession();
         }, TaskCreationOptions.LongRunning);
 
         var BackendThread = Task.Run(() =>
@@ -102,6 +121,9 @@ internal static class Program
             }
         # endif
 
+        // Test crash handling by uncommenting this line.
+        throw new Exception("Test crash handling. This should show a popup and log to OpenTelemetry.");
+
         // Gotta wait for the UI thread to close (i.e. user closed the window)
         // and then tell the backend to shutdown too.
         UI.Program.Main(args);
@@ -112,5 +134,55 @@ internal static class Program
         GameTelemetry.Current.Shutdown();
         ApplicationState.Current.Shutdown();
         TutorialHandler.Current.Shutdown();
+
+        LogFileWriter.Current.Save();
     }
+
+    /// <summary>
+    ///  Handles a full app crash exception. We'll display a popup to the user
+    ///  and log the error to OpenTelemetry if possible.
+    /// </summary>
+    /// <param name="ex"></param>
+    private static void HandleFatalException(Exception? ex)
+    {
+        if (ex == null) return;
+
+        string errorMessage = $"ETS2LA has encountered a fatal error.\n\n" +
+                              $"Error: {ex.Message}\n\n" +
+                              $"Stack Trace:\n{ex.StackTrace}";
+
+        // This logs to OpenTelemetry. The log won't go through if the user has telemetry disabled though...
+        try
+        {
+            AppAnalytics.LogEvent("app.crash", new Dictionary<string, string>
+            {
+                { "exception.type", ex.GetType().ToString() },
+                { "exception.message", ex.Message },
+                { "exception.stacktrace", ex.StackTrace ?? "" }
+            });
+        } catch {}
+        
+        # if WINDOWS
+        {
+            try { NativeMethods.MessageBox(IntPtr.Zero, errorMessage, "ETS2LA", 0x10); }
+            catch { }
+        # else
+            // zenity is a standard linux utility, at least that's what gemini told me...
+            try { System.Diagnostics.Process.Start("zenity", $"--error --title=\"ETS2LA\" --text=\"{errorMessage.Replace("\"", "\\\"")}\""); }
+            catch { }
+        # endif
+
+        try { Logger.Error(errorMessage); }
+        catch { }
+
+        LogFileWriter.Current.Save();
+        // Force terminate
+        Environment.Exit(1);
+    }
+}
+
+internal static class NativeMethods
+{
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 }
