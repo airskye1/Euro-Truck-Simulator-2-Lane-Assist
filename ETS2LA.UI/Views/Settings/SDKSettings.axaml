@@ -62,8 +62,8 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock Text="Game missing? If your installation wasn't detected automatically, you can add it by selecting its install folder (the one containing base.scs)." Classes="Description" Margin="14 7 14 0" TextWrapping="Wrap" />
-            <Button Content="Add Game Manually" Width="150" HorizontalAlignment="Left" Margin="14 7 14 7" Click="OnAddGameManually" AutomationProperties.Name="Add Game Manually" />
+            <TextBlock Text="Game missing? You can add it by selecting its install folder. If you see 'bin' and 'licenses' you're in the right place." Classes="Description" Margin="14 7 14 7" TextWrapping="Wrap" />
+            <Button Content="Add Game Manually" Width="160" HorizontalAlignment="Left" Margin="14 7 14 7" Click="OnAddGameManually" AutomationProperties.Name="Add Game Manually" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>
