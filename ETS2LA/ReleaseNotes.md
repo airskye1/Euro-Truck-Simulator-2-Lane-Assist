@@ -1,8 +1,10 @@
-### ETS2LA C# 3.4.23
-- `Wiki` sidebar page is now implemented, although very basic.
-- Crashes are now correctly sent to the server via a `Counter`, rather than only being logged locally.
-- **Drk** - Refactored game version detection, now works on both operating systems.
-- **Drk** - You can now add a game ETS2LA missed manually in the SDK settings.
+### ETS2LA C# 3.4.24
+- Close ETS2LA if it's already running. This will display an error.
+- AudioHandler `Queue()` no longer allows files that don't exist. These would previously cause a crash.
+- `PluginApiHandler` no longer crashes when missing a network connection or the server is down.
+- **Drk** - Fix a case where ETS2LA could close before the crash report gets sent via telemetry.
+- **Drk** - Don't write spectre markup into `ets2la.log`.
+- **Drk** - Use memory editing for acceleration on Linux. This will be ported to Windows when the implementation is stable.
 
 ---
 <!-- Content inside ETS2LA will be cutoff at the line above, do not place lines inside the changelog. -->
