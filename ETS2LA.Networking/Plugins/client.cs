@@ -56,20 +56,27 @@ public class PluginApiClient
 
     public async Task FetchAvailablePluginsAsync()
     {
-        var apiServer = NetworkingSettings.Current.CurrentApiServer;
-        if (apiServer == null)
+        try
         {
-            throw new InvalidOperationException("CurrentApiServer is not set.");
+            var apiServer = NetworkingSettings.Current.CurrentApiServer;
+            if (apiServer == null)
+            {
+                throw new InvalidOperationException("CurrentApiServer is not set.");
+            }
+
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync($"{apiServer.Value.BaseUrl}/plugins");
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            AvailablePlugins = JsonSerializer.Deserialize<List<NetworkPlugin>>(jsonResponse, jsonOptions) ?? new List<NetworkPlugin>();
+
+            Log($"Fetched {AvailablePlugins.Count} plugins from {apiServer.Value.BaseUrl}");
         }
-
-        using var httpClient = new HttpClient();
-        var response = await httpClient.GetAsync($"{apiServer.Value.BaseUrl}/plugins");
-        response.EnsureSuccessStatusCode();
-
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-        AvailablePlugins = JsonSerializer.Deserialize<List<NetworkPlugin>>(jsonResponse, jsonOptions) ?? new List<NetworkPlugin>();
-
-        Log($"Fetched {AvailablePlugins.Count} plugins from {apiServer.Value.BaseUrl}");
+        catch
+        {
+            Log($"Failed to fetch available plugins. Please check your internet connection.", NotificationLevel.Danger);
+        }
     }
 
     public bool PluginHasUpdateAvailable(string pluginId)
