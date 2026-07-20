@@ -17,14 +17,12 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Exporter;
 
-using System.Runtime.InteropServices;
-
 namespace ETS2LA;
 
 internal static class Program
 {
-    private static TracerProvider? _tracerProvider;
-    private static MeterProvider? _meterProvider;
+    private static TracerProvider? tracerProvider;
+    private static MeterProvider? meterProvider;
 
     /// <summary>
     ///  Main entrypoint for ETS2LA.
@@ -35,7 +33,7 @@ internal static class Program
         // Nothing else *should* run on the main thread.
         AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
         {
-            HandleFatalException(e.ExceptionObject as Exception);
+            Utils.HandleFatalException(e.ExceptionObject as Exception, tracerProvider, meterProvider);
         };
 
         // This is for unobserved exceptions, i.e. plugins and other Task.Run() calls etc..
@@ -51,8 +49,11 @@ internal static class Program
                 return;
             }
 
-            HandleFatalException(e.Exception);
+            Utils.HandleFatalException(e.Exception, tracerProvider, meterProvider);
         };
+
+        if (Utils.DoesETS2LAProcessExist())
+            throw new InvalidOperationException("ETS2LA is already running, please close it from the Task Manager.");
 
         // Velopack is the installer / update manager
         // Please don't move this, Velopack has to be initialized before anything else,
@@ -77,7 +78,7 @@ internal static class Program
             .AddService("ETS2LA", serviceVersion: currentVersion)
             .AddAttributes(OTelAttributes.GetAttributes());
 
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
+        tracerProvider = Sdk.CreateTracerProviderBuilder()
             .SetResourceBuilder(appResource)
             .AddSource("ETS2LA.*")
             .AddOtlpExporter(options =>
@@ -87,7 +88,7 @@ internal static class Program
             })
             .Build();
         
-        _meterProvider = Sdk.CreateMeterProviderBuilder()
+        meterProvider = Sdk.CreateMeterProviderBuilder()
             .SetResourceBuilder(appResource)
             .AddMeter("ETS2LA.*")
             .AddOtlpExporter(options =>
@@ -142,62 +143,7 @@ internal static class Program
         TutorialHandler.Current.Shutdown();
 
         LogFileWriter.Current.Save();
-        _meterProvider?.Dispose();
-        _tracerProvider?.Dispose();
+        meterProvider?.Dispose();
+        tracerProvider?.Dispose();
     }
-
-    /// <summary>
-    ///  Handles a full app crash exception. We'll display a popup to the user
-    ///  and log the error to OpenTelemetry if possible.
-    /// </summary>
-    /// <param name="ex"></param>
-    private static void HandleFatalException(Exception? ex)
-    {
-        if (ex == null) return;
-
-        if (ex is AggregateException aggregate)
-            ex = aggregate.Flatten().InnerExceptions.FirstOrDefault() ?? ex;
-
-        string errorMessage = $"ETS2LA has encountered a fatal error.\n\n" +
-                              $"Error: {ex.Message}\n\n" +
-                              $"Stack Trace:\n{ex.StackTrace}";
-
-        // This logs to OpenTelemetry. The log won't go through if the user has telemetry disabled though...
-        try
-        {
-            AppAnalytics.LogEvent("app.crash", new Dictionary<string, string>
-            {
-                { "exception.type", ex.GetType().ToString() },
-                { "exception.message", ex.Message },
-                { "exception.stacktrace", ex.StackTrace ?? "" }
-            });
-        } catch {}
-        
-        # if WINDOWS
-            try { NativeMethods.MessageBox(IntPtr.Zero, errorMessage, "ETS2LA", 0x10); }
-            catch { }
-        # else
-            // zenity is a standard linux utility, at least that's what gemini told me...
-            try { System.Diagnostics.Process.Start("zenity", $"--error --title=\"ETS2LA\" --text=\"{errorMessage.Replace("\"", "\\\"")}\""); }
-            catch { }
-        # endif
-
-        try { Logger.Error(errorMessage); }
-        catch { }
-
-        LogFileWriter.Current.Save();
-
-        // Environment.Exit skips disposal so we flush manually.
-        try { _meterProvider?.ForceFlush(5000); } catch { }
-        try { _tracerProvider?.ForceFlush(5000); } catch { }
-
-        // Force terminate
-        Environment.Exit(1);
-    }
-}
-
-internal static class NativeMethods
-{
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 }
