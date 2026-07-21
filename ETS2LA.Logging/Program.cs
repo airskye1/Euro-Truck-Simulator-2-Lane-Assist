@@ -12,6 +12,7 @@ public static class Logger
     // (ie. someone is logging a warning in Tick())
     public static string lastLine = "";
     public static int repeatCount = 0;
+    private static bool hasConsole = false;
 
     private static readonly object logLock = new();
 
@@ -19,6 +20,8 @@ public static class Logger
     static Logger()
     {
         Console = AnsiConsole.Console;
+        try { Console.Write("Console initialized"); hasConsole = true; }
+        catch { }
         var logFileWriter = LogFileWriter.Current;
     }
 
@@ -39,6 +42,8 @@ public static class Logger
     // message is logged again.
     public static void PrintRepeating(string message)
     {
+        if (!hasConsole) return;
+        
         bool canMoveCursor = !System.Console.IsOutputRedirected;
 
         if (repeatCount == 0 || !canMoveCursor)
@@ -74,35 +79,39 @@ public static class Logger
             plainMessage = message;
         }
         OnLog?.Invoke(Tuple.Create(level, plainMessage));
-        var source = GetSourceInfo(filePath, lineNumber);
-        var timestamp = GetTimestamp();
-        var levelTag = $"[{color}][[{level}]][/]";
 
-        // Two columns, one on the left and one on the right
-        // for the source info.
-        var table = new Table().HideHeaders().HideRowSeparators().Border(TableBorder.None).Expand();
-        table.AddColumn(new TableColumn("").NoWrap());
-        table.AddColumn(new TableColumn("").NoWrap().Alignment(Justify.Right));
+        if (hasConsole)
+        {
+            var source = GetSourceInfo(filePath, lineNumber);
+            var timestamp = GetTimestamp();
+            var levelTag = $"[{color}][[{level}]][/]";
 
-        try
-        {
-            table.AddRow(
-                new Markup($"{timestamp} {levelTag} {message}"),
-                new Markup(source)
-            );
-        } catch (Exception markupEx)
-        {
-            // If something goes wrong with the markup (eg. message contains invalid markup)
-            // just print the message without markup instead of crashing the logger.
-            Console.WriteLine($"{timestamp} [{level}] {plainMessage} ({source})");
-            Console.WriteLine($"Error while writing log line: {markupEx}");
-            return;
-        }
+            // Two columns, one on the left and one on the right
+            // for the source info.
+            var table = new Table().HideHeaders().HideRowSeparators().Border(TableBorder.None).Expand();
+            table.AddColumn(new TableColumn("").NoWrap());
+            table.AddColumn(new TableColumn("").NoWrap().Alignment(Justify.Right));
 
-        Console.Write(table);
-        if (ex != null)
-        {
-            Console.WriteLine(ex.ToString());
+            try
+            {
+                table.AddRow(
+                    new Markup($"{timestamp} {levelTag} {message}"),
+                    new Markup(source)
+                );
+            } catch (Exception markupEx)
+            {
+                // If something goes wrong with the markup (eg. message contains invalid markup)
+                // just print the message without markup instead of crashing the logger.
+                Console.WriteLine($"{timestamp} [{level}] {plainMessage} ({source})");
+                Console.WriteLine($"Error while writing log line: {markupEx}");
+                return;
+            }
+
+            Console.Write(table);
+            if (ex != null)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
     }
 
