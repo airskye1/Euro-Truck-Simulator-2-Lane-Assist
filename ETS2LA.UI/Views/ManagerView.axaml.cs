@@ -15,6 +15,15 @@ namespace ETS2LA.UI.Views;
 
 public partial class ManagerView : UserControl, INotifyPropertyChanged
 {
+    
+    private void OpenCataloguePage(object? sender, RoutedEventArgs e)
+    {
+        var mainWindow = MainWindow.Instance;
+        if (mainWindow != null)
+        {
+            mainWindow.NavigateToPage(MainWindow.PageKind.Catalogue);
+        }
+    }
     // This list is listened by the UI to show available plugins.
     public ObservableCollection<PluginItem> Plugins { get; } = new();
     public ObservableCollection<PluginItem> FilteredPlugins { get; } = new();
