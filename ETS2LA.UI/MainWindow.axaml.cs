@@ -17,7 +17,6 @@ using Huskui.Avalonia.Controls;
 namespace ETS2LA.UI;
 
 // TODO: Documentation, cleanup code!
-
 public partial class MainWindow : AppWindow
 {
     public static MainWindow? Instance { get; private set; }

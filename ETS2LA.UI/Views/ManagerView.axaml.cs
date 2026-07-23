@@ -14,8 +14,7 @@ using ETS2LA.Logging;
 namespace ETS2LA.UI.Views;
 
 public partial class ManagerView : UserControl, INotifyPropertyChanged
-{
-    
+{  
     private void OpenCataloguePage(object? sender, RoutedEventArgs e)
     {
         var mainWindow = MainWindow.Instance;
