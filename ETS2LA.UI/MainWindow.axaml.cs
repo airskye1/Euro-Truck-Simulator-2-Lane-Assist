@@ -1,4 +1,3 @@
-
 using Avalonia.Media;
 using Avalonia.Input;
 using Avalonia.Controls;
@@ -20,6 +19,7 @@ namespace ETS2LA.UI;
 public partial class MainWindow : AppWindow
 {
     public static MainWindow? Instance { get; private set; }
+    
     public enum PageKind
     {
         Dashboard,
